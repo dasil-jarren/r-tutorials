@@ -1,0 +1,108 @@
+---
+title: "Introduction to dplyr"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+# Load necessary libraries
+library(learnr)
+library(dplyr)
+
+# Load necessary data
+colleges <- read.csv("tutorials/Introduction to dplyr/data/colleges2015.csv")
+
+# Hide this chunk from user view
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+## Welcome
+
+Data manipulation is central to data analysis and is often the most time consuming portion of an analysis. The `dplyr` package contains a suite of functions to make data manipulation easier. The core functions of the `dplyr` package can be thought of as verbs for data manipulation.
+
+Verb(s)               | Meaning
+--------------------- | -----------------------------------------------------
+`filter` and `slice`  | pick specific observations (i.e. specific rows)
+`arrange`             | reorder the rows
+`select`              | pick variables by their names (i.e. specific columns)
+`mutate`              | add new calculated columns to a data frame
+`summarize`           | aggregate many rows into a single row 
+
+In this example we will explore how to use each of these functions, as well as how to combine them with the `group_by` function for groupwise manipulations.
+
+## Setup
+
+This tutorial is set up so that you do not have to load in libraries or data.  It is all done for you behind the scenes!  However, if you are working in R or RStudio, you can follow the code below to load the `dplyr` package and `colleges` dataset.
+
+```{r, message = FALSE, warning = FALSE, exercise = FALSE}
+
+```
+
+
+To begin, let's make sure that our data set and the `dplyr` package are loaded.  This tutorial is set up so that you do not have to 
+
+
+## Topic 1
+
+### Exercise 
+
+*Here's a simple exercise with an empty code chunk provided for entering the answer.*
+
+Write the R code required to add two plus two:
+
+```{r two-plus-two, exercise=TRUE}
+
+```
+
+### Exercise with Code
+
+*Here's an exercise with some prepopulated code as well as `exercise.lines = 5` to provide a bit more initial room to work.*
+
+Now write a function that adds any two numbers and then call it:
+
+```{r add-function, exercise=TRUE, exercise.lines = 5}
+add <- function() {
+  
+}
+```
+
+## Topic 2
+
+### Exercise with Hint
+
+*Here's an exercise where the chunk is pre-evaulated via the `exercise.eval` option (so the user can see the default output we'd like them to customize). We also add a "hint" to the correct solution via the chunk immediate below labeled `print-limit-hint`.*
+
+Modify the following code to limit the number of rows printed to 5:
+
+```{r print-limit, exercise=TRUE, exercise.eval=TRUE}
+mtcars
+```
+
+```{r print-limit-hint}
+head(mtcars)
+```
+
+### Quiz
+
+*You can include any number of single or multiple choice questions as a quiz. Use the `question` function to define a question and the `quiz` function for grouping multiple questions together.*
+
+Some questions to verify that you understand the purposes of various base and recommended R packages:
+
+```{r quiz}
+quiz(
+  question("Which package contains functions for installing other R packages?",
+    answer("base"),
+    answer("tools"),
+    answer("utils", correct = TRUE),
+    answer("codetools")
+  ),
+  question("Which of the R packages listed below are used to create plots?",
+    answer("lattice", correct = TRUE),
+    answer("tools"),
+    answer("stats"),
+    answer("grid", correct = TRUE)
+  )
+)
+```
+
