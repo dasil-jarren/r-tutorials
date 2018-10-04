@@ -7,8 +7,9 @@ This work represents collaborative work across Grinnell College (Shonda Kuiper),
 - **data-viz**: An introduction to the `ggplot2` package. The tutorial introduces how use the `qplot` function, how to build plots layer by layer using `ggplot` and geometries, and how the `mplot` function from the `mosaic` package can be used to generate `ggplot2` graphics.
 
 
-- **data-wrangling**: An introduction to data wrangling using the `dplyr` functions `filter`, `arrange`, `select`, 
-`mutate`, and `summarize`.
+- **data-wrangling**: An introduction to data wrangling using the `dplyr` functions `filter()`, `arrange()`, `select()`, `mutate()`, and `summarize()`.
+
+[Corresponding data-wrangling tutorial](https://dasil-jarren.shinyapps.io/Tutorial_IntroDplyr/#section-welcome): [https://dasil-jarren.shinyapps.io/Tutorial_IntroDplyr/#section-welcome](https://dasil-jarren.shinyapps.io/Tutorial_IntroDplyr/#section-welcome)
 
 - **dates-times**: An introduction to working with dates and times using the `lubridate` package.
 

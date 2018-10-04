@@ -299,6 +299,83 @@ summarize(colleges,
 
 ## 7. Groupwise Manipulation
 
+Often it is of interest to manipulate data within groups. For example, we might be more interested in creating separate summaries for each state, or for private and public colleges. To do this we must first tell R what groups are of interest using the `group_by()` function, and then we can use any of the functions previously mentioned in this tutorial. Most often `group_by()` is paired with the `summarize()` or `mutate()` functions.
+
+Let's first consider comparing the cost of private and public colleges. First, we must specify that the variable `type` defines the groups of interest.
+
+```{r collegetype, exercise = TRUE}
+colleges_by_type <- group_by(colleges, type)
+colleges_by_type
+```
+
+### Remarks
+
+* After specifying the data frame, list the categorical variable(s) defining the groups.
+
+<!-- * When we print the data frame it tells us the variables that define the groups and how many groups are in the data frame. This provides sanity checks, so be sure to pay attention to if this matches your expectation! For example, if there were any typos in the column or if just one value is capitalized (such as Public) we would be told there are more than two groups. -->
+
+* Multiple variables can be used to specify the groups. For example, to specify groups by state and type, we would run the following command:
+
+```{r collegesbystate, exercise = TRUE}
+colleges_state_type <- group_by(colleges, state, type)
+colleges_state_type
+```
+
+
+#### Combining `group_by` with other commands 
+
+Once we have a grouped data frame, we can obtain summaries by group via `summarize()`. For example, the five number summary of cost by institution type is obtained below
+
+```{r summtype, exercise = TRUE}
+colleges_by_type <- group_by(colleges, type)
+summarize(colleges_by_type, 
+          min = min(cost, na.rm = TRUE), 
+          Q1 = quantile(cost, .25, na.rm = TRUE), 
+          median = median(cost, na.rm = TRUE), 
+          Q3 = quantile(cost, .75, na.rm = TRUE), 
+          max = max(cost, na.rm = TRUE))
+```
+
+
+We can also calculate new variables within groups, such as the standardized cost of attendance within each state:
+
+```{r mutatestate, exercise = TRUE}
+colleges_by_state <- group_by(colleges, state)
+colleges_by_state <- mutate(colleges_by_state, 
+                            mean.cost = mean(cost, na.rm = TRUE), 
+                            sd.cost = sd(cost, na.rm = TRUE),
+                            std.cost = (cost - mean.cost) / sd.cost)
+head(colleges_by_state)
+```
+
+### Remarks
+
+* `mutate()` allows you to use variables defined earlier to calculate a new variable. This is how `std.cost` was calculated.
+
+* The `group_by()` function returns an object of class `c("grouped_df", "tbl_df", "tbl", "data.frame")`, which looks confusing, but essentially allows the data frame to be printed neatly. Notice that only the first 10 rows print when we print the data frame in the console by typing `colleges_by_state`, and the width of the console determines how many variables are shown.
+
+* To print all columns we can convert the results back to a `data.frame` using the `as.data.frame()` function. Try running `head(as.data.frame(colleges_by_state))` below:
+
+```{r convert, exercise = TRUE}
+colleges_by_state <- group_by(colleges, state)
+colleges_by_state <- mutate(colleges_by_state, 
+                            mean.cost = mean(cost, na.rm = TRUE), 
+                            sd.cost = sd(cost, na.rm = TRUE),
+                            std.cost = (cost - mean.cost) / sd.cost)
+
+# Original class of colleges_by_state
+class(colleges_by_state)
+
+# New class of colleges_by_state using as.data.frame()
+colleges_by_state_df <- as.data.frame(colleges_by_state)
+class(colleges_by_state_df)
+head(colleges_by_state_df)
+```
+
+* If you have RStudio installed on your computer, you can also use the viewer by running the command `View(colleges_by_state)`.
+
+* Another option is to `select()` a reduced number of columns to print.
+
 ## 8. On Your Own
 
 1. Filter the rows for colleges in Great Lakes or Plains regions.
@@ -318,68 +395,3 @@ summarize(colleges,
 * The [introductory vignette](https://cran.rstudio.com/web/packages/dplyr/vignettes/dplyr.html) to `dplyr` provides an example of wrangling a dataset consisting of 336,776 flights that departed from New York City in 2013.
 
 * Roger Peng's [video overview](https://www.youtube.com/watch?v=aywFompr1F4&feature=youtu.be) of the `dplyr` package.
-
-
-## Topic 1
-
-### Exercise 
-
-*Here's a simple exercise with an empty code chunk provided for entering the answer.*
-
-Write the R code required to add two plus two:
-
-```{r two-plus-two, exercise=TRUE}
-
-```
-
-### Exercise with Code
-
-*Here's an exercise with some prepopulated code as well as `exercise.lines = 5` to provide a bit more initial room to work.*
-
-Now write a function that adds any two numbers and then call it:
-
-```{r add-function, exercise=TRUE, exercise.lines = 5}
-add <- function() {
-  
-}
-```
-
-## Topic 2
-
-### Exercise with Hint
-
-*Here's an exercise where the chunk is pre-evaulated via the `exercise.eval` option (so the user can see the default output we'd like them to customize). We also add a "hint" to the correct solution via the chunk immediate below labeled `print-limit-hint`.*
-
-Modify the following code to limit the number of rows printed to 5:
-
-```{r print-limit, exercise=TRUE, exercise.eval=TRUE}
-mtcars
-```
-
-```{r print-limit-hint}
-head(mtcars)
-```
-
-### Quiz
-
-*You can include any number of single or multiple choice questions as a quiz. Use the `question` function to define a question and the `quiz` function for grouping multiple questions together.*
-
-Some questions to verify that you understand the purposes of various base and recommended R packages:
-
-```{r quiz}
-quiz(
-  question("Which package contains functions for installing other R packages?",
-    answer("base"),
-    answer("tools"),
-    answer("utils", correct = TRUE),
-    answer("codetools")
-  ),
-  question("Which of the R packages listed below are used to create plots?",
-    answer("lattice", correct = TRUE),
-    answer("tools"),
-    answer("stats"),
-    answer("grid", correct = TRUE)
-  )
-)
-```
-
