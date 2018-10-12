@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+<meta name="progressive" content="false" />
+<meta name="allow-skip" content="false" />
+
+<title>Introduction to Tidy Data in R</title>
+
+
+<!-- highlightjs -->
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+</head>
+
+<body>
+
+
+
+<div class="pageContent band">
+<div class="bandContent page">
+
+<div class="topics">
+
+<div id="section-introduction" class="section level2">
+<h2>Introduction</h2>
+<p>Data sets are stored in tabular format and there are many possible ways to organize tabular data. Some organizational schemes are designed to be easily read on the page (or screen), while others are designed to be easily used in analysis. In this tutorial, we focus on how a data set should be formatted for analysis in R.</p>
+<p>Make sure that the following packages are loaded</p>
+<p>and load in the example data sets</p>
+</div>
+<div id="section-part-1.-definition-of-a-tidy-data-set" class="section level2">
+<h2>Part 1. Definition of a tidy data set</h2>
+<p>In R, it is easiest to work with data that follow five basic rules:</p>
+<ol style="list-style-type: decimal">
+<li>Every <strong>variable</strong> is stored in its own <strong>column</strong>.</li>
+<li>Every observation is stored in its own <strong>row</strong>—that is, every row corresponds to a single <strong>case</strong>.</li>
+<li>Each <strong>value</strong> of a variable is stored in a <strong>cell</strong> of the table.</li>
+<li>Values should not contain units. Rather, units should be specified in the supporting documentation for the data set, often called a <em>codebook</em>.</li>
+<li>There should be no extraneous information (footnotes, table titles, etc.).</li>
+</ol>
+<p>A data set satisfying these rules is said to be <strong>tidy</strong>, a term popularized by Hadley Wickham.</p>
+<p><strong>Remark</strong>: Most of the time data that violate rules 4 and 5 are obviously not tidy, and there are easy ways to exclude footnotes and titles in spreadsheets by simply omitting the offending rows. This tutorial focuses on the “sneakier” form of untidiness that violates at least one of the first three rules.</p>
+<p>This tutorial will describe the following <code>tidyr</code> commands, which can be thought of as verbs for tidying data:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>gather</code></td>
+<td>collapses multiple columns into two columns</td>
+</tr>
+<tr class="even">
+<td><code>spread</code></td>
+<td>creates multiple columns from two columns</td>
+</tr>
+<tr class="odd">
+<td><code>separate</code></td>
+<td>splits compound variables into individual columns</td>
+</tr>
+</tbody>
+</table>
+<!-- ### Example A -->
+<!-- The Happy Planet Index (HPI) is an alternative measure of the well-being of people within countries that was developed by the New Economies Foundation. The `hpi` data set contains the most recent index and supporting data. -->
+<!-- The `hpi` data set is tidy because -->
+<!-- 1. Each variable is a column. -->
+<!-- 2. Each row corresponds to a single country (i.e., case).  -->
+<!-- 3. The values of the variables correspond to cells of the table. -->
+<!-- 4. Each cell only contain values of variables. -->
+<!-- 5. There are not titles, footnotes, etc. -->
+<!-- ```{r} -->
+<!-- head(hpi) -->
+<!-- ``` -->
+</div>
+<div id="section-part-2.-tidying-longitudinal-data-gather" class="section level2">
+<h2>Part 2. Tidying longitudinal data (<code>gather</code>)</h2>
+<p>UBS is an international bank that reports prices of various staples in major cities every three years. The data set in <code>UBSprices</code> data set contains prices of a 1 kg bag of rice in 2009 and 2003 in major world cities. The data set was extracted from the <code>alr4</code> R package.</p>
+<div class="tutorial-exercise" data-label="2a" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>head(UBSprices)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["city"],"name":[1],"type":["chr"],"align":["left"]},{"label":["rice2003"],"name":[2],"type":["int"],"align":["right"]},{"label":["rice2009"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Amsterdam","2":"9","3":"11","_rn_":"1"},{"1":"Athens","2":"19","3":"27","_rn_":"2"},{"1":"Auckland","2":"9","3":"13","_rn_":"3"},{"1":"Bangkok","2":"25","3":"27","_rn_":"4"},{"1":"Barcelona","2":"10","3":"8","_rn_":"5"},{"1":"Berlin","2":"16","3":"17","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>This data set is not tidy because each row contains two cases: the city in 2003 and the city in 2009. Additionally, the column names <code>2003</code> and <code>2009</code> contain the year, which should be the value of a variable. In order to tidy these data, we need to</p>
+<ol style="list-style-type: decimal">
+<li>Reorganize the data so that each row corresponds to a city in a specific year.</li>
+<li>Create a single variable for the price of rice.</li>
+<li>Add a variable for year.</li>
+</ol>
+<p>To do this, we will use the <code>gather</code> function in the <code>tidyr</code> package. <code>gather</code> collapses multiple columns into two columns: a <strong>key</strong> column and a <strong>value</strong> column. The <strong>key</strong> will be the new variable containing the old column names and the <strong>value</strong> will contain the information recorded in the cells of the collapsed columns.</p>
+<p>In our example, we want to collapse <code>rice2003</code> and <code>rice2009</code> into the key-value pair <code>year</code> and <code>price</code>. To do this, we use the following command:</p>
+<div class="tutorial-exercise" data-label="2b" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_ubs &lt;- gather(data = UBSprices, key = year, value = price, rice2003, rice2009)
+head(tidy_ubs)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["city"],"name":[1],"type":["chr"],"align":["left"]},{"label":["year"],"name":[2],"type":["chr"],"align":["left"]},{"label":["price"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Amsterdam","2":"rice2003","3":"9","_rn_":"1"},{"1":"Athens","2":"rice2003","3":"19","_rn_":"2"},{"1":"Auckland","2":"rice2003","3":"9","_rn_":"3"},{"1":"Bangkok","2":"rice2003","3":"25","_rn_":"4"},{"1":"Barcelona","2":"rice2003","3":"10","_rn_":"5"},{"1":"Berlin","2":"rice2003","3":"16","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p><strong>Remarks</strong></p>
+<ul>
+<li>The first argument passed to <code>gather</code> should be the data frame being tidied. This is true for all of the <code>tidyr</code> functions we discuss in this tutorial.</li>
+<li>After specifying the data frame, the next two arguments specify the column names you wish to give to two new columns. One column is called the <strong>key</strong> and the other is called the <strong>values</strong>.</li>
+<li>After the first three arguments, specify the columns that you wish to collapse, separated by commas. Notice that the original column names are now listed in the key column and the original cell values are now all in one column.</li>
+</ul>
+<p><strong>Questions:</strong></p>
+<ol style="list-style-type: decimal">
+<li>How are the number of rows adjusted by using the <code>gather</code> command? Use the <code>dim(UBSprices)</code> command to determine how many rows are in the <strong>UBSprices</strong> data set and <code>dim(tidy_ubs)</code> to determine how many are in the <strong>tidy_ubs</strong> data set).</li>
+</ol>
+<div class="tutorial-exercise" data-label="2-c" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<ol start="2" style="list-style-type: decimal">
+<li>How many rows would there be if used the gather command and the original <strong>UBSprices</strong> data set had five columns of years: <code>rice2003</code>, <code>rice2006</code>, <code>rice2009</code>, <code>rice2012</code>, and <code>rice2015</code>?</li>
+</ol>
+<div class="tutorial-exercise" data-label="2-d" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Finally, we need to modify the year column by removing the word rice from each cell. To do this, we can use the <code>extract_numeric</code> function in the <code>tidyr</code> package. We now have a data set that we can call tidy.</p>
+<div class="tutorial-exercise" data-label="2-e" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_ubs$year &lt;- extract_numeric(tidy_ubs$year)</code></pre>
+<pre><code>extract_numeric() is deprecated: please use readr::parse_number() instead</code></pre>
+<pre class="text"><code>head(tidy_ubs)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["city"],"name":[1],"type":["chr"],"align":["left"]},{"label":["year"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["price"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Amsterdam","2":"2003","3":"9","_rn_":"1"},{"1":"Athens","2":"2003","3":"19","_rn_":"2"},{"1":"Auckland","2":"2003","3":"9","_rn_":"3"},{"1":"Bangkok","2":"2003","3":"25","_rn_":"4"},{"1":"Barcelona","2":"2003","3":"10","_rn_":"5"},{"1":"Berlin","2":"2003","3":"16","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p><strong>Remark</strong></p>
+<p>This data set started in a relatively tidy form, so it may be difficult to see the benefit of tidying it. Tidy data is typically required for summarizing and plotting data in R. For example, consider making a side-by-side boxplot using <code>ggformula</code> (see the tutorial IntroToGgplot).</p>
+<div class="tutorial-exercise" data-label="2-f" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_ubs %&gt;%
+  gf_boxplot(price ~ factor(year)) %&gt;%
+  gf_labs(x = &quot;year&quot;)</code></pre>
+<img src="IntroTidyData_files/figure-html/2-f-1.png" width="624" />
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>This was straightforward since <strong>tidy_ubs</strong> was already tidy, but would have required extra manipulation in the original format.</p>
+</div>
+<div id="section-part-3.-tidying-pollster-data-separate-gather" class="section level2">
+<h2>Part 3. Tidying pollster data (<code>separate + gather</code>)</h2>
+<p>The <strong>polls</strong> data set contains the results of various presidential polls conducted during July 2016, and was scraped from <a href="http://www.realclearpolitics.com/epolls/latest_polls/president/">RealClear Politics</a>.</p>
+<div class="tutorial-exercise" data-label="3-a" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>polls</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Poll"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Date"],"name":[2],"type":["chr"],"align":["left"]},{"label":["Sample"],"name":[3],"type":["chr"],"align":["left"]},{"label":["MoE"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Clinton..D."],"name":[5],"type":["int"],"align":["right"]},{"label":["Trump..R."],"name":[6],"type":["int"],"align":["right"]},{"label":["Johnson..L."],"name":[7],"type":["int"],"align":["right"]},{"label":["Stein..G."],"name":[8],"type":["int"],"align":["right"]}],"data":[{"1":"Monmouth","2":"7/14 - 7/16","3":"688 LV","4":"3.7","5":"45","6":"43","7":"5","8":"1"},{"1":"CNN/ORC","2":"7/13 - 7/16","3":"872 RV","4":"3.5","5":"42","6":"37","7":"13","8":"5"},{"1":"ABC News/Wash Post","2":"7/11 - 7/14","3":"816 RV","4":"4.0","5":"42","6":"38","7":"8","8":"5"},{"1":"NBC News/Wall St. Jrnl","2":"7/9 - 7/13","3":"1000 RV","4":"3.1","5":"41","6":"35","7":"11","8":"6"},{"1":"Economist/YouGov","2":"7/9 - 7/11","3":"932 RV","4":"4.5","5":"40","6":"37","7":"5","8":"2"},{"1":"Associated Press-GfK","2":"7/7 - 7/11","3":"837 RV","4":"NA","5":"40","6":"36","7":"6","8":"2"},{"1":"McClatchy/Marist","2":"7/5 - 7/9","3":"1053 RV","4":"3.0","5":"40","6":"35","7":"10","8":"5"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Here, the data set is not tidy because</p>
+<ul>
+<li>The <code>Date</code> column contains both the beginning and end dates. These should be stored in separate columns.</li>
+<li>The <code>Sample</code> column contains two variables: the number of people in the sample and the population that was sampled (likely voters or registered voters). These should be stored in separate columns.</li>
+<li>The last four column names are values of <code>candidate</code> and <code>party</code> variables, which should be stored in their own columns.</li>
+</ul>
+<p>To break a single <u>character</u> column into multiple new columns we use the <code>separate</code> function in the <code>tidyr</code> package.</p>
+<p>To begin, let’s break the <code>Date</code> column into <code>Begin</code> and <code>End</code> columns:</p>
+<div class="tutorial-exercise" data-label="3-b" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_polls &lt;- separate(data = polls, col = Date, into = c(&quot;Begin&quot;, &quot;End&quot;), sep = &quot; - &quot;)
+tidy_polls</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Poll"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Begin"],"name":[2],"type":["chr"],"align":["left"]},{"label":["End"],"name":[3],"type":["chr"],"align":["left"]},{"label":["Sample"],"name":[4],"type":["chr"],"align":["left"]},{"label":["MoE"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["Clinton..D."],"name":[6],"type":["int"],"align":["right"]},{"label":["Trump..R."],"name":[7],"type":["int"],"align":["right"]},{"label":["Johnson..L."],"name":[8],"type":["int"],"align":["right"]},{"label":["Stein..G."],"name":[9],"type":["int"],"align":["right"]}],"data":[{"1":"Monmouth","2":"7/14","3":"7/16","4":"688 LV","5":"3.7","6":"45","7":"43","8":"5","9":"1"},{"1":"CNN/ORC","2":"7/13","3":"7/16","4":"872 RV","5":"3.5","6":"42","7":"37","8":"13","9":"5"},{"1":"ABC News/Wash Post","2":"7/11","3":"7/14","4":"816 RV","5":"4.0","6":"42","7":"38","8":"8","9":"5"},{"1":"NBC News/Wall St. Jrnl","2":"7/9","3":"7/13","4":"1000 RV","5":"3.1","6":"41","7":"35","8":"11","9":"6"},{"1":"Economist/YouGov","2":"7/9","3":"7/11","4":"932 RV","5":"4.5","6":"40","7":"37","8":"5","9":"2"},{"1":"Associated Press-GfK","2":"7/7","3":"7/11","4":"837 RV","5":"NA","6":"40","7":"36","8":"6","9":"2"},{"1":"McClatchy/Marist","2":"7/5","3":"7/9","4":"1053 RV","5":"3.0","6":"40","7":"35","8":"10","9":"5"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p><strong>Remarks</strong></p>
+<!-- * The first argument passed to `separate` is the name of the data frame to be tidied. -->
+<ul>
+<li>The second argument, <code>col</code>, specifies the name of the column to be split.</li>
+<li>The third argument, <code>into</code>, specifies the names of the new columns. Note that since these are specific column names we are creating, they should be given in quotes.</li>
+<li>R will try to guess how the values should be separated by searching for non-alphanumeric values; however, if there are multiple non-alphanumeric values this may fail. In this example, if we did not specify that <code>sep = &quot; - &quot;</code>, then R would erroneously use <code>\</code> as the separator. To manually specify the separator between columns we can place the character(s) in quotes.</li>
+<li>In <code>sep = &quot; - &quot;</code>, the spaces around <code>-</code> avoid excess whitespace in the resulting cell values. <!-- (We find it to be "safer" to always specify the separator between columns.) --></li>
+</ul>
+<p>We also need to separate the <code>Sample</code> column into <code>size</code> and <code>population</code> columns.</p>
+<div class="tutorial-exercise" data-label="3-c" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_polls &lt;- separate(data = tidy_polls, col = Sample, into = c(&quot;size&quot;, &quot;population&quot;), sep = &quot; &quot;)
+tidy_polls</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Poll"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Begin"],"name":[2],"type":["chr"],"align":["left"]},{"label":["End"],"name":[3],"type":["chr"],"align":["left"]},{"label":["size"],"name":[4],"type":["chr"],"align":["left"]},{"label":["population"],"name":[5],"type":["chr"],"align":["left"]},{"label":["MoE"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["Clinton..D."],"name":[7],"type":["int"],"align":["right"]},{"label":["Trump..R."],"name":[8],"type":["int"],"align":["right"]},{"label":["Johnson..L."],"name":[9],"type":["int"],"align":["right"]},{"label":["Stein..G."],"name":[10],"type":["int"],"align":["right"]}],"data":[{"1":"Monmouth","2":"7/14","3":"7/16","4":"688","5":"LV","6":"3.7","7":"45","8":"43","9":"5","10":"1"},{"1":"CNN/ORC","2":"7/13","3":"7/16","4":"872","5":"RV","6":"3.5","7":"42","8":"37","9":"13","10":"5"},{"1":"ABC News/Wash Post","2":"7/11","3":"7/14","4":"816","5":"RV","6":"4.0","7":"42","8":"38","9":"8","10":"5"},{"1":"NBC News/Wall St. Jrnl","2":"7/9","3":"7/13","4":"1000","5":"RV","6":"3.1","7":"41","8":"35","9":"11","10":"6"},{"1":"Economist/YouGov","2":"7/9","3":"7/11","4":"932","5":"RV","6":"4.5","7":"40","8":"37","9":"5","10":"2"},{"1":"Associated Press-GfK","2":"7/7","3":"7/11","4":"837","5":"RV","6":"NA","7":"40","8":"36","9":"6","10":"2"},{"1":"McClatchy/Marist","2":"7/5","3":"7/9","4":"1053","5":"RV","6":"3.0","7":"40","8":"35","9":"10","10":"5"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Next, we need to <code>gather</code> the last four columns into a <code>candidate</code> variable.</p>
+<div class="tutorial-exercise" data-label="3-d" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_polls &lt;- gather(data = tidy_polls, key = candidate, value = percentage, 7:10)
+head(tidy_polls)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["Poll"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Begin"],"name":[2],"type":["chr"],"align":["left"]},{"label":["End"],"name":[3],"type":["chr"],"align":["left"]},{"label":["size"],"name":[4],"type":["chr"],"align":["left"]},{"label":["population"],"name":[5],"type":["chr"],"align":["left"]},{"label":["MoE"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["candidate"],"name":[7],"type":["chr"],"align":["left"]},{"label":["percentage"],"name":[8],"type":["int"],"align":["right"]}],"data":[{"1":"Monmouth","2":"7/14","3":"7/16","4":"688","5":"LV","6":"3.7","7":"Clinton..D.","8":"45","_rn_":"1"},{"1":"CNN/ORC","2":"7/13","3":"7/16","4":"872","5":"RV","6":"3.5","7":"Clinton..D.","8":"42","_rn_":"2"},{"1":"ABC News/Wash Post","2":"7/11","3":"7/14","4":"816","5":"RV","6":"4.0","7":"Clinton..D.","8":"42","_rn_":"3"},{"1":"NBC News/Wall St. Jrnl","2":"7/9","3":"7/13","4":"1000","5":"RV","6":"3.1","7":"Clinton..D.","8":"41","_rn_":"4"},{"1":"Economist/YouGov","2":"7/9","3":"7/11","4":"932","5":"RV","6":"4.5","7":"Clinton..D.","8":"40","_rn_":"5"},{"1":"Associated Press-GfK","2":"7/7","3":"7/11","4":"837","5":"RV","6":"NA","7":"Clinton..D.","8":"40","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Notice that instead of writing out the column names (<code>Clinton..D.</code>, <code>Trump..R.</code>, etc.) we can simply specify the column numbers—here <code>7:10</code> specifies that we are gathering columns 7 through 10.</p>
+<p>Finally, we need to <code>separate</code> the candidate names from the political party.</p>
+<div class="tutorial-exercise" data-label="3-e" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_polls &lt;- separate(tidy_polls, candidate, into= c(&quot;candidate&quot;, &quot;party&quot;))</code></pre>
+<pre><code>Warning: Expected 2 pieces. Additional pieces discarded in 28 rows [1, 2,
+3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...].</code></pre>
+<pre class="text"><code>head(tidy_polls)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["Poll"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Begin"],"name":[2],"type":["chr"],"align":["left"]},{"label":["End"],"name":[3],"type":["chr"],"align":["left"]},{"label":["size"],"name":[4],"type":["chr"],"align":["left"]},{"label":["population"],"name":[5],"type":["chr"],"align":["left"]},{"label":["MoE"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["candidate"],"name":[7],"type":["chr"],"align":["left"]},{"label":["party"],"name":[8],"type":["chr"],"align":["left"]},{"label":["percentage"],"name":[9],"type":["int"],"align":["right"]}],"data":[{"1":"Monmouth","2":"7/14","3":"7/16","4":"688","5":"LV","6":"3.7","7":"Clinton","8":"D","9":"45","_rn_":"1"},{"1":"CNN/ORC","2":"7/13","3":"7/16","4":"872","5":"RV","6":"3.5","7":"Clinton","8":"D","9":"42","_rn_":"2"},{"1":"ABC News/Wash Post","2":"7/11","3":"7/14","4":"816","5":"RV","6":"4.0","7":"Clinton","8":"D","9":"42","_rn_":"3"},{"1":"NBC News/Wall St. Jrnl","2":"7/9","3":"7/13","4":"1000","5":"RV","6":"3.1","7":"Clinton","8":"D","9":"41","_rn_":"4"},{"1":"Economist/YouGov","2":"7/9","3":"7/11","4":"932","5":"RV","6":"4.5","7":"Clinton","8":"D","9":"40","_rn_":"5"},{"1":"Associated Press-GfK","2":"7/7","3":"7/11","4":"837","5":"RV","6":"NA","7":"Clinton","8":"D","9":"40","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p><strong>Remark</strong></p>
+<p>In the last command we let R guess which separator to use. This worked, but resulted in a warning message—we’re lucky that it worked! There are many situations where the separator is too complex for R to guess correctly and it cannot be specified using a simple character in quotes. In such cases we need to use regular expressions (see the tutorial IntroStrings) to aid our data tidying, but that’s a topic for another tutorial. The important thing to note here is that you should <u>always check</u> that <code>separate</code> worked as you expected, don’t blindly trust it!</p>
+</div>
+<div id="section-part-4.-tidying-crash-data-gather-separate-spread" class="section level2">
+<h2>Part 4. Tidying crash data (<code>gather + separate + spread</code>)</h2>
+<p>The <strong>airlines</strong> data set contains the <a href="https://github.com/fivethirtyeight/data/tree/master/airline-safety">raw data</a> behind the article <a href="http://fivethirtyeight.com/features/should-travelers-avoid-flying-airlines-that-have-had-crashes-in-the-past/">Should Travelers Avoid Flying Airlines That Have Had Crashes in the Past?</a> that appeared on <a href="http://fivethirtyeight.com/">fivethirtyeight.com</a>.</p>
+<div class="tutorial-exercise" data-label="4-a" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>head(airlines)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["airline"],"name":[1],"type":["chr"],"align":["left"]},{"label":["avail_seat_km_per_week"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["incidents.1985_1999"],"name":[3],"type":["int"],"align":["right"]},{"label":["fatal_accidents.1985_1999"],"name":[4],"type":["int"],"align":["right"]},{"label":["fatalities.1985_1999"],"name":[5],"type":["int"],"align":["right"]},{"label":["incidents.2000_2014"],"name":[6],"type":["int"],"align":["right"]},{"label":["fatal_accidents.2000_2014"],"name":[7],"type":["int"],"align":["right"]},{"label":["fatalities.2000_2014"],"name":[8],"type":["int"],"align":["right"]}],"data":[{"1":"Aer Lingus","2":"320906734","3":"2","4":"0","5":"0","6":"0","7":"0","8":"0","_rn_":"1"},{"1":"Aeroflot*","2":"1197672318","3":"76","4":"14","5":"128","6":"6","7":"1","8":"88","_rn_":"2"},{"1":"Aerolineas Argentinas","2":"385803648","3":"6","4":"0","5":"0","6":"1","7":"0","8":"0","_rn_":"3"},{"1":"Aeromexico*","2":"596871813","3":"3","4":"1","5":"64","6":"5","7":"0","8":"0","_rn_":"4"},{"1":"Air Canada","2":"1865253802","3":"2","4":"0","5":"0","6":"2","7":"0","8":"0","_rn_":"5"},{"1":"Air France","2":"3004002661","3":"14","4":"4","5":"79","6":"6","7":"2","8":"337","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>In this example, a case is best described as an airline in a specific time frame, so these data are not tidy because each case is not its own row. Additionally, the last six column names contain the time frame, which is a value. In order to tidy this data set we must</p>
+<ul>
+<li>have rows corresponding to airlines in a specific time frame,</li>
+<li>create a <code>years</code> column to specify the time frame,</li>
+<li>and create columns for each type of accident: <code>incidents</code>, <code>fatal_accidents</code>, and <code>fatalities</code>.</li>
+</ul>
+<p>First, we <code>gather</code> the last six columns into a common <code>accidents</code> column. This will allow us to easily create the <code>years</code> column.</p>
+<div class="tutorial-exercise" data-label="4-b" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_airlines &lt;- gather(airlines, key = accidents, value = count, 3:8)
+head(tidy_airlines)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["airline"],"name":[1],"type":["chr"],"align":["left"]},{"label":["avail_seat_km_per_week"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["accidents"],"name":[3],"type":["chr"],"align":["left"]},{"label":["count"],"name":[4],"type":["int"],"align":["right"]}],"data":[{"1":"Aer Lingus","2":"320906734","3":"incidents.1985_1999","4":"2","_rn_":"1"},{"1":"Aeroflot*","2":"1197672318","3":"incidents.1985_1999","4":"76","_rn_":"2"},{"1":"Aerolineas Argentinas","2":"385803648","3":"incidents.1985_1999","4":"6","_rn_":"3"},{"1":"Aeromexico*","2":"596871813","3":"incidents.1985_1999","4":"3","_rn_":"4"},{"1":"Air Canada","2":"1865253802","3":"incidents.1985_1999","4":"2","_rn_":"5"},{"1":"Air France","2":"3004002661","3":"incidents.1985_1999","4":"14","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Next, we <code>separate</code> the values of the new <code>accidents</code> column into <code>var</code> (short for variable) and <code>years</code>. The default guessing scheme fails here, so we must specify <code>sep = &quot;[.]&quot;</code> to denote that the period is the separator. (If you want to learn more about why we need brackets around the period you need to delve into regular expressions.)</p>
+<div class="tutorial-exercise" data-label="4-c" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_airlines &lt;- separate(tidy_airlines, accidents, into = c(&quot;var&quot;, &quot;years&quot;), sep = &quot;[.]&quot;)
+head(tidy_airlines)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["airline"],"name":[1],"type":["chr"],"align":["left"]},{"label":["avail_seat_km_per_week"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["var"],"name":[3],"type":["chr"],"align":["left"]},{"label":["years"],"name":[4],"type":["chr"],"align":["left"]},{"label":["count"],"name":[5],"type":["int"],"align":["right"]}],"data":[{"1":"Aer Lingus","2":"320906734","3":"incidents","4":"1985_1999","5":"2","_rn_":"1"},{"1":"Aeroflot*","2":"1197672318","3":"incidents","4":"1985_1999","5":"76","_rn_":"2"},{"1":"Aerolineas Argentinas","2":"385803648","3":"incidents","4":"1985_1999","5":"6","_rn_":"3"},{"1":"Aeromexico*","2":"596871813","3":"incidents","4":"1985_1999","5":"3","_rn_":"4"},{"1":"Air Canada","2":"1865253802","3":"incidents","4":"1985_1999","5":"2","_rn_":"5"},{"1":"Air France","2":"3004002661","3":"incidents","4":"1985_1999","5":"14","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p>Finally, we need to ensure that each row corresponds to a case. (Don’t worry, this will also make each column a variable!) Currently, there are six rows for each airline: one for each <code>var</code> in each time frame. To solve this problem, we need to <code>spread</code> out the <code>var</code> column so that each variable has its own column.</p>
+<div class="tutorial-exercise" data-label="4-d" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="0">
+<pre class="text"><code>tidy_airlines &lt;- spread(data = tidy_airlines, key = var, value = count)
+head(tidy_airlines)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["airline"],"name":[1],"type":["chr"],"align":["left"]},{"label":["avail_seat_km_per_week"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["years"],"name":[3],"type":["chr"],"align":["left"]},{"label":["fatal_accidents"],"name":[4],"type":["int"],"align":["right"]},{"label":["fatalities"],"name":[5],"type":["int"],"align":["right"]},{"label":["incidents"],"name":[6],"type":["int"],"align":["right"]}],"data":[{"1":"Aer Lingus","2":"320906734","3":"1985_1999","4":"0","5":"0","6":"2","_rn_":"1"},{"1":"Aer Lingus","2":"320906734","3":"2000_2014","4":"0","5":"0","6":"0","_rn_":"2"},{"1":"Aeroflot*","2":"1197672318","3":"1985_1999","4":"14","5":"128","6":"76","_rn_":"3"},{"1":"Aeroflot*","2":"1197672318","3":"2000_2014","4":"1","5":"88","6":"6","_rn_":"4"},{"1":"Aerolineas Argentinas","2":"385803648","3":"1985_1999","4":"0","5":"0","6":"6","_rn_":"5"},{"1":"Aerolineas Argentinas","2":"385803648","3":"2000_2014","4":"0","5":"0","6":"1","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div>
+<p><strong>Remark</strong></p>
+<p>Notice that the first argument given to <code>spread</code> is the data frame, followed by the key-value pair. The key is the name of the column whose values will be used as column headings and the value is the name of the column whose values will populate the cells of the new columns. In this example, we use <code>var</code> as the key and populate the cells with the <code>count</code>.</p>
+</div>
+<div id="section-part-5.-on-your-own" class="section level2">
+<h2>Part 5. On Your Own</h2>
+<ol style="list-style-type: decimal">
+<li>The file <code>daily_show_guests.csv</code> contains information on every guest Jon Stewart ever had on <em>The Daily Show</em>. (Source: <a href="https://github.com/fivethirtyeight/data/tree/master/daily-show-guests" class="uri">https://github.com/fivethirtyeight/data/tree/master/daily-show-guests</a>) Briefly explain why this is a tidy data set.
+<div class="tutorial-exercise" data-label="5-a" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+<li>The file <code>under5mortality.csv</code> contains the child mortality rate per 1,000 children born for each country from 1800 to 2015. (Source: <a href="https://www.gapminder.org/data/" class="uri">https://www.gapminder.org/data/</a>)
+<ol style="list-style-type: lower-alpha">
+<li>Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+<div class="tutorial-exercise" data-label="5-b" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+<li>Use <code>gather</code> to create a tidy data set with columns <code>country</code>, <code>year</code> and <code>mortality</code>. Use <code>extract_numeric</code> to ensure that the <code>year</code> column is numeric.
+<div class="tutorial-exercise" data-label="5-c" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+</ol></li>
+<li>The file <code>mlb2016.csv</code> contains the salary information presented by <em>USA Today</em> for all 862 players in Major League Baseball. (Source: <a href="http://www.usatoday.com/sports/mlb/salaries/2016/player/all/" class="uri">http://www.usatoday.com/sports/mlb/salaries/2016/player/all/</a>)
+<ol style="list-style-type: lower-alpha">
+<li>Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+<div class="tutorial-exercise" data-label="5-d" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+<li>Use <code>separate</code> and <code>extract_numeric</code> to tidy this data set.
+<div class="tutorial-exercise" data-label="5-e" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+</ol></li>
+<li>The data set in <code>UBSprices2.csv</code> contains prices of a 1 kg bag of rice, a 1 kg loaf of bread, and a Big Mac in major world cities in 2009 and 2003.
+<ol style="list-style-type: lower-alpha">
+<li>Briefly describe why it is not considered to be tidy data and what changes need to be made to tidy it.
+<div class="tutorial-exercise" data-label="5-f" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+<li>Use <code>gather</code> and <code>separate</code> to tidy this data set. <br> (Hint: In addition to accepting characters, the <code>sep</code> argument can also be set to the position at which to create a split. For example, if we specify <code>sep = 2</code>, then the character strings will be split into the first two characters and the remaining characters. In this example the type of commodity is of variable length, so it is easiest to count from the left. This is specified by using a negative value.)
+<div class="tutorial-exercise" data-label="5-g" data-caption="Code" data-completion="1" data-diagnostics="1" data-startover="1" data-lines="5">
+<script type="application/json" data-opts-chunk="1">{"fig.width":6.5,"fig.height":4,"fig.retina":2,"fig.align":"default","fig.keep":"high","fig.show":"asis","out.width":624,"warning":true,"error":false,"message":true,"exercise.df_print":"paged","exercise.checker":"NULL"}</script>
+</div></li>
+</ol></li>
+</ol>
+</div>
+<div id="section-part-6.-additional-resources" class="section level2">
+<h2>Part 6. Additional Resources</h2>
+<ul>
+<li><p><a href="https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf">RStudio’s data wrangling cheat sheet</a> provides a nice summary of how to reshape data sets and a quick reminder of the definition of tidy data.</p></li>
+<li>The <a href="https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html"><code>tidyr</code> vignette</a> provides additional examples and elaborates on the capabilities of the <code>tidyr</code> package. 
+<script type="application/shiny-prerendered" data-context="server-start">
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE)
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+learnr:::register_http_handlers(session, metadata = NULL)
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2a-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2a-code-editor`)), session)
+output$`tutorial-exercise-2a-output` <- renderUI({
+  `tutorial-exercise-2a-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2b-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2b-code-editor`)), session)
+output$`tutorial-exercise-2b-output` <- renderUI({
+  `tutorial-exercise-2b-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2-c-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2-c-code-editor`)), session)
+output$`tutorial-exercise-2-c-output` <- renderUI({
+  `tutorial-exercise-2-c-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2-d-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2-d-code-editor`)), session)
+output$`tutorial-exercise-2-d-output` <- renderUI({
+  `tutorial-exercise-2-d-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2-e-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2-e-code-editor`)), session)
+output$`tutorial-exercise-2-e-output` <- renderUI({
+  `tutorial-exercise-2-e-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-2-f-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-2-f-code-editor`)), session)
+output$`tutorial-exercise-2-f-output` <- renderUI({
+  `tutorial-exercise-2-f-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-3-a-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-3-a-code-editor`)), session)
+output$`tutorial-exercise-3-a-output` <- renderUI({
+  `tutorial-exercise-3-a-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-3-b-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-3-b-code-editor`)), session)
+output$`tutorial-exercise-3-b-output` <- renderUI({
+  `tutorial-exercise-3-b-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-3-c-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-3-c-code-editor`)), session)
+output$`tutorial-exercise-3-c-output` <- renderUI({
+  `tutorial-exercise-3-c-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-3-d-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-3-d-code-editor`)), session)
+output$`tutorial-exercise-3-d-output` <- renderUI({
+  `tutorial-exercise-3-d-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-3-e-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-3-e-code-editor`)), session)
+output$`tutorial-exercise-3-e-output` <- renderUI({
+  `tutorial-exercise-3-e-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-4-a-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-4-a-code-editor`)), session)
+output$`tutorial-exercise-4-a-output` <- renderUI({
+  `tutorial-exercise-4-a-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-4-b-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-4-b-code-editor`)), session)
+output$`tutorial-exercise-4-b-output` <- renderUI({
+  `tutorial-exercise-4-b-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-4-c-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-4-c-code-editor`)), session)
+output$`tutorial-exercise-4-c-output` <- renderUI({
+  `tutorial-exercise-4-c-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-4-d-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-4-d-code-editor`)), session)
+output$`tutorial-exercise-4-d-output` <- renderUI({
+  `tutorial-exercise-4-d-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-a-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-a-code-editor`)), session)
+output$`tutorial-exercise-5-a-output` <- renderUI({
+  `tutorial-exercise-5-a-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-b-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-b-code-editor`)), session)
+output$`tutorial-exercise-5-b-output` <- renderUI({
+  `tutorial-exercise-5-b-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-c-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-c-code-editor`)), session)
+output$`tutorial-exercise-5-c-output` <- renderUI({
+  `tutorial-exercise-5-c-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-d-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-d-code-editor`)), session)
+output$`tutorial-exercise-5-d-output` <- renderUI({
+  `tutorial-exercise-5-d-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-e-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-e-code-editor`)), session)
+output$`tutorial-exercise-5-e-output` <- renderUI({
+  `tutorial-exercise-5-e-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-f-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-f-code-editor`)), session)
+output$`tutorial-exercise-5-f-output` <- renderUI({
+  `tutorial-exercise-5-f-result`()
+})
+</script>
+ 
+<script type="application/shiny-prerendered" data-context="server">
+`tutorial-exercise-5-g-result` <- learnr:::setup_exercise_handler(reactive(req(input$`tutorial-exercise-5-g-code-editor`)), session)
+output$`tutorial-exercise-5-g-output` <- renderUI({
+  `tutorial-exercise-5-g-result`()
+})
+</script>
+ <!--html_preserve-->
+<script type="application/shiny-prerendered" data-context="dependencies">
+{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootstrap"]},{"type":"character","attributes":{},"value":["3.3.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/bootstrap-3.3.5"]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["viewport"]}},"value":[{"type":"character","attributes":{},"value":["width=device-width, initial-scale=1"]}]},{"type":"character","attributes":{},"value":["js/bootstrap.min.js","shim/html5shiv.min.js","shim/respond.min.js"]},{"type":"character","attributes":{},"value":["css/cerulean.min.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["pagedtable"]},{"type":"character","attributes":{},"value":["1.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/pagedtable-1.1"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["js/pagedtable.js"]},{"type":"character","attributes":{},"value":["css/pagedtable.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["highlightjs"]},{"type":"character","attributes":{},"value":["9.12.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/highlightjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["highlight.js"]},{"type":"character","attributes":{},"value":["textmate.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-format"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmarkdown/templates/tutorial/resources"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-format.js"]},{"type":"character","attributes":{},"value":["tutorial-format.css","rstudio-theme.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["jquery"]},{"type":"character","attributes":{},"value":["1.11.3"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/jquery-1.11.3"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["jquery.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["font-awesome"]},{"type":"character","attributes":{},"value":["5.0.13"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["rmd/h/fontawesome"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["js/fontawesome-all.min.js","js/fa-v4-shims.min.js"]},{"type":"character","attributes":{},"value":["css/fa-svg-with-js.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["rmarkdown"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["bootbox"]},{"type":"character","attributes":{},"value":["4.4.0"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/bootbox"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["bootbox.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["localforage"]},{"type":"character","attributes":{},"value":["1.5"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/localforage"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["localforage.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial.js"]},{"type":"character","attributes":{},"value":["tutorial.css"]},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-autocompletion"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-autocompletion.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["tutorial-diagnostics"]},{"type":"character","attributes":{},"value":["0.9.2.1"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/tutorial"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["tutorial-diagnostics.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["ace"]},{"type":"character","attributes":{},"value":["1.2.6"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/ace"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["ace.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","version","src","meta","script","stylesheet","head","attachment","package","all_files"]},"class":{"type":"character","attributes":{},"value":["html_dependency"]}},"value":[{"type":"character","attributes":{},"value":["clipboardjs"]},{"type":"character","attributes":{},"value":["1.5.15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["file"]}},"value":[{"type":"character","attributes":{},"value":["lib/clipboardjs"]}]},{"type":"NULL"},{"type":"character","attributes":{},"value":["clipboard.min.js"]},{"type":"NULL"},{"type":"NULL"},{"type":"NULL"},{"type":"character","attributes":{},"value":["learnr"]},{"type":"logical","attributes":{},"value":[true]}]}]}
+</script>
+<!--/html_preserve--></li>
+</ul>
+</div>
+
+</div> <!-- topics -->
+
+<div class="topicsContainer">
+<div class="topicsPositioner">
+<div class="band">
+<div class="bandContent topicsListContainer">
+
+<!-- begin doc-metadata -->
+<div id="doc-metadata">
+<h2 class="title toc-ignore" style="display:none;">Introduction to Tidy Data in R</h2>
+</div>
+<!-- end doc-metadata -->
+
+</div> <!-- bandContent.topicsListContainer -->
+</div> <!-- band -->
+</div> <!-- topicsPositioner -->
+</div> <!-- topicsContainer -->
+
+
+</div> <!-- bandContent page -->
+</div> <!-- pageContent band -->
+
+
+
+
+<script>
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+</script>
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+
+</html>
